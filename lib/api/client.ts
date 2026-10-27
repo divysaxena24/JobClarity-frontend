@@ -1,7 +1,12 @@
-﻿import axios from "axios";
-import type { PredictionRequest, PredictionResponse } from "@/types/prediction";
+import axios from "axios";
+import type {
+  JDGenerationRequest,
+  JDGenerationResponse,
+  PredictionRequest,
+  PredictionResponse,
+} from "@/types/prediction";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://jobclarity-0tz8.onrender.com";
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -110,6 +115,46 @@ export async function predictJob(job_description: string): Promise<PredictionRes
 
     // Non-Axios unknown error
     const unknownMsg = (anyErr && (anyErr.message ?? String(anyErr))) || "Something went wrong. Please try again.";
+    throw new Error(unknownMsg);
+  }
+}
+
+/**
+ * Generate synthetic job description from structured role and requirements.
+ */
+export async function generateJobDescription(
+  params: JDGenerationRequest
+): Promise<JDGenerationResponse> {
+  try {
+    const res = await apiClient.post<JDGenerationResponse>("/generate-jd", params);
+    return res.data;
+  } catch (err: unknown) {
+    const anyErr = err as {
+      code?: string;
+      message?: string;
+      response?: { statusText?: string; data?: unknown };
+      request?: unknown;
+    };
+    if (anyErr?.code === "ECONNABORTED") {
+      throw new Error("The generator service timed out. Please try again.");
+    }
+
+    if (axios.isAxiosError(err)) {
+      const responseData = anyErr.response?.data;
+      const serverMsg = extractServerMessage(responseData);
+      if (serverMsg) {
+        throw new Error(serverMsg);
+      }
+      if (anyErr.response?.statusText) {
+        throw new Error(anyErr.response.statusText);
+      }
+      if (anyErr.request && !anyErr.response) {
+        throw new Error("Network error connecting to JD generator. Please try again.");
+      }
+      throw new Error(anyErr.message ?? "Failed to generate job description.");
+    }
+
+    const unknownMsg = (anyErr && (anyErr.message ?? String(anyErr))) || "Failed to generate job description.";
     throw new Error(unknownMsg);
   }
 }

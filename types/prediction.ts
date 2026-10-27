@@ -1,4 +1,4 @@
-﻿export interface TopReason {
+export interface TopReason {
   feature: string;
   impact: number;
   effect: string;
@@ -15,4 +15,28 @@ export interface PredictionResponse {
 
 export interface PredictionRequest {
   job_description: string;
+}
+
+export interface JDGenerationRequest {
+  job_role: string;
+  skills: string;
+  experience_level: string;
+  location: string;
+  company_name?: string;
+  salary_range?: string;
+}
+
+export interface JDGenerationResponse {
+  generated_job_description: string;
+  is_ai_generated: boolean;
+  provider: string;
+  disclaimer: string;
+  input_parameters: {
+    job_role: string;
+    skills: string;
+    experience_level: string;
+    location: string;
+    company_name?: string;
+    salary_range?: string;
+  };
 }

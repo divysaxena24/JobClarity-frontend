@@ -2,15 +2,17 @@
 
 import { useCallback, useRef, useState } from "react";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
-import { CircleAlert, Sparkles } from "lucide-react";
+import { ArrowLeft, Bot, CircleAlert, FileText, Sparkles } from "lucide-react";
 import { predictJob } from "@/lib/api/client";
 import { HeroBackground } from "@/components/layout/HeroBackground";
 import { AnalyzerCard } from "@/components/analyzer/AnalyzerCard";
+import { JDGeneratorCard } from "@/components/generator/JDGeneratorCard";
 import { SAMPLE_JOBS } from "@/components/analyzer/SampleJobs";
 import { EmptyState } from "@/components/prediction/EmptyState";
 import { LoadingState } from "@/components/prediction/LoadingState";
 import { PredictionDashboard } from "@/components/prediction/PredictionDashboard";
 import type { PredictionResponse } from "@/types/prediction";
+import { cn } from "@/lib/utils";
 
 const container: Variants = {
   hidden: {},
@@ -29,7 +31,12 @@ const item: Variants = {
 };
 
 export default function Hero() {
+  const [mode, setMode] = useState<"manual" | "generate">("manual");
   const [jobDescription, setJobDescription] = useState("");
+  const [isAiGenerated, setIsAiGenerated] = useState(false);
+  const [generatorDisclaimer, setGeneratorDisclaimer] = useState<string | null>(null);
+  const [generatorStep, setGeneratorStep] = useState<"form" | "preview">("form");
+
   const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
   const [predictionKey, setPredictionKey] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -60,6 +67,16 @@ export default function Hero() {
     sampleIndex.current += 1;
     setJobDescription(job.description);
     setActiveSample(job.label);
+    setIsAiGenerated(false);
+    setGeneratorDisclaimer(null);
+    setError(null);
+  }, []);
+
+  const handleGeneratedJD = useCallback((description: string, disclaimer: string) => {
+    setJobDescription(description);
+    setIsAiGenerated(true);
+    setGeneratorDisclaimer(disclaimer);
+    setGeneratorStep("preview");
     setError(null);
   }, []);
 
@@ -82,7 +99,7 @@ export default function Hero() {
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-60" />
             <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
           </span>
-          AI-powered fraud detection
+          AI-powered fraud detection & synthetic JD evaluation
           <Sparkles className="size-3.5 text-indigo-500" aria-hidden="true" />
         </motion.div>
 
@@ -101,24 +118,98 @@ export default function Hero() {
           variants={item}
           className="mt-5 max-w-2xl text-balance text-center text-base leading-7 text-muted-foreground sm:text-lg sm:leading-8"
         >
-          Analyze any job posting in seconds using Machine Learning and
-          Explainable AI. Detect scams, understand risk factors, and make
-          safer career decisions.
+          Analyze any job posting in seconds using Machine Learning and Explainable AI.
+          Paste an existing listing or synthesize an editable job description to test model resilience.
         </motion.p>
 
-        {/* Analyzer */}
-        <div className="mt-10 w-full max-w-2xl">
-          <AnalyzerCard
-            value={jobDescription}
-            onChange={(value) => {
-              setJobDescription(value);
+        {/* Workflow Mode Tabs */}
+        <motion.div variants={item} className="mt-8 flex rounded-2xl border border-border/80 bg-background/80 p-1 shadow-sm backdrop-blur">
+          <button
+            type="button"
+            onClick={() => {
+              setMode("manual");
               setError(null);
             }}
-            onAnalyze={handleAnalyze}
-            onTrySample={handleTrySample}
-            loading={loading}
-            activeSample={activeSample}
-          />
+            className={cn(
+              "flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium transition-all sm:text-sm",
+              mode === "manual"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <FileText className="size-3.5" />
+            Manual Paste
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode("generate");
+              setError(null);
+            }}
+            className={cn(
+              "flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium transition-all sm:text-sm",
+              mode === "generate"
+                ? "bg-violet-600 text-white shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Bot className="size-3.5" />
+            Generate &amp; Analyze (AI)
+          </button>
+        </motion.div>
+
+        {/* Analyzer / Generator Cards */}
+        <div className="mt-6 w-full max-w-2xl">
+          {mode === "generate" && generatorStep === "form" ? (
+            <JDGeneratorCard onGenerated={handleGeneratedJD} disabled={loading} />
+          ) : (
+            <div>
+              {mode === "generate" && generatorStep === "preview" && (
+                <div className="mb-4 flex flex-col gap-2 rounded-2xl border border-violet-500/30 bg-violet-500/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/40 bg-violet-500/20 px-2.5 py-0.5 text-xs font-semibold text-violet-700 dark:text-violet-300">
+                      <Sparkles className="size-3" />
+                      AI-Generated Synthetic Content
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      Editable before analysis
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setGeneratorStep("form")}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-violet-700 underline-offset-4 hover:underline dark:text-violet-300"
+                  >
+                    <ArrowLeft className="size-3" />
+                    Back to Generator Form
+                  </button>
+                </div>
+              )}
+
+              {/* Model Risk Disclaimer Banner */}
+              {isAiGenerated && (
+                <div className="mb-4 rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-2.5 text-xs leading-5 text-amber-800 dark:text-amber-300">
+                  <p className="font-semibold">Trust &amp; Safety Disclaimer:</p>
+                  <p className="mt-0.5 opacity-90">
+                    {generatorDisclaimer ||
+                      "Model predictions are statistical risk estimates based on text patterns, not conclusive proof of fraud or employer verification."}
+                  </p>
+                </div>
+              )}
+
+              <AnalyzerCard
+                value={jobDescription}
+                onChange={(value) => {
+                  setJobDescription(value);
+                  setError(null);
+                }}
+                onAnalyze={handleAnalyze}
+                onTrySample={handleTrySample}
+                loading={loading}
+                activeSample={activeSample}
+              />
+            </div>
+          )}
         </div>
 
         {/* Error alert */}
