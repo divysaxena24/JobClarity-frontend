@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { AlertCircle, Bot, CheckCircle2, LoaderCircle, Sparkles, Wand2 } from "lucide-react";
+import { AlertCircle, Bot, LoaderCircle, Sparkles, Wand2 } from "lucide-react";
 import { generateJobDescription } from "@/lib/api/client";
-import { cn } from "@/lib/utils";
 
 interface JDGeneratorCardProps {
   onGenerated: (description: string, disclaimer: string) => void;
