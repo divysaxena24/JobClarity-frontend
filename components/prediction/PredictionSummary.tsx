@@ -7,6 +7,8 @@ import {
   CheckCircle2,
   Clock,
   Cpu,
+  Download,
+  Loader2,
   Percent,
   ShieldAlert,
   ShieldCheck,
@@ -16,14 +18,20 @@ import type { PredictionResponse } from "@/types/prediction";
 import { RiskBadge } from "@/components/prediction/RiskBadge";
 import { AnimatedRiskGauge } from "@/components/prediction/AnimatedRiskGauge";
 import { InfoTooltip } from "@/components/prediction/InfoTooltip";
+import { exportPredictionReportPDF } from "@/lib/pdf/reportGenerator";
 import { cn } from "@/lib/utils";
 
 interface PredictionSummaryProps {
   prediction: PredictionResponse;
   timestamp?: string;
+  jobDescription?: string;
 }
 
-export function PredictionSummary({ prediction, timestamp }: PredictionSummaryProps) {
+export function PredictionSummary({
+  prediction,
+  timestamp,
+  jobDescription = "",
+}: PredictionSummaryProps) {
   const [analyzedTimestamp] = useState<string>(() => {
     if (timestamp) return timestamp;
     const now = new Date();
@@ -33,6 +41,25 @@ export function PredictionSummary({ prediction, timestamp }: PredictionSummaryPr
       second: "2-digit",
     });
   });
+
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportSuccess, setExportSuccess] = useState(false);
+
+  const handleExportPDF = () => {
+    try {
+      setIsExporting(true);
+      exportPredictionReportPDF({
+        prediction,
+        jobDescription,
+      });
+      setExportSuccess(true);
+      setTimeout(() => setExportSuccess(false), 2500);
+    } catch (err) {
+      console.error("Failed to export PDF report:", err);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const isFake = prediction?.prediction === "Fake";
   const rawProb = Number.isFinite(prediction?.fraud_probability)
@@ -50,6 +77,21 @@ export function PredictionSummary({ prediction, timestamp }: PredictionSummaryPr
     (riskScore <= 25 ? "Low" : riskScore <= 50 ? "Medium" : riskScore <= 75 ? "High" : "Critical");
 
   const modelVersion = prediction?.model_version || "1.0.0";
+
+  // Calibrated verdict language (non-absolute, trust-centered)
+  const verdictTitle =
+    riskScore >= 50 || isFake
+      ? "High Risk — Verify Before Applying"
+      : riskScore >= 25
+      ? "Elevated Risk — Caution Advised"
+      : "Likely Legitimate";
+
+  const verdictDescription =
+    riskScore >= 50 || isFake
+      ? "Significant deceptive signals, vocabulary anomalies, or scam patterns detected."
+      : riskScore >= 25
+      ? "Moderate anomalous language patterns detected. Further independent employer verification is recommended."
+      : "Verified authentic terminology, standard responsibilities, and standard corporate patterns.";
 
   // Moderation action recommendation based on verified risk level
   const moderationAction = isFake
@@ -96,7 +138,7 @@ export function PredictionSummary({ prediction, timestamp }: PredictionSummaryPr
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
           <RiskBadge level={riskLevel} />
           <span
             className={cn(
@@ -106,6 +148,30 @@ export function PredictionSummary({ prediction, timestamp }: PredictionSummaryPr
           >
             {moderationAction.label}
           </span>
+          <button
+            type="button"
+            onClick={handleExportPDF}
+            disabled={isExporting}
+            aria-label="Export risk assessment report as PDF"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border/80 bg-background/80 px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm transition-all hover:bg-accent hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/40 active:scale-95 disabled:pointer-events-none disabled:opacity-60 cursor-pointer"
+          >
+            {isExporting ? (
+              <>
+                <Loader2 className="size-3.5 animate-spin text-primary" aria-hidden="true" />
+                <span>Exporting...</span>
+              </>
+            ) : exportSuccess ? (
+              <>
+                <CheckCircle2 className="size-3.5 text-emerald-500" aria-hidden="true" />
+                <span>Downloaded</span>
+              </>
+            ) : (
+              <>
+                <Download className="size-3.5 text-primary" aria-hidden="true" />
+                <span>Export Report</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
 
@@ -142,30 +208,30 @@ export function PredictionSummary({ prediction, timestamp }: PredictionSummaryPr
               <h3
                 className={cn(
                   "text-2xl font-extrabold tracking-tight sm:text-3xl",
-                  isFake
+                  riskScore >= 50 || isFake
                     ? "text-red-600 dark:text-red-400"
+                    : riskScore >= 25
+                    ? "text-amber-600 dark:text-amber-400"
                     : "text-emerald-600 dark:text-emerald-400"
                 )}
               >
-                {isFake ? "Likely Fraudulent Job" : "Likely Legitimate Job"}
+                {verdictTitle}
               </h3>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {isFake
-                  ? "High-confidence deceptive signals, vocabulary anomalies, or scam patterns detected."
-                  : "Verified authentic terminology, standard responsibilities, and legitimate corporate patterns."}
+                {verdictDescription}
               </p>
             </div>
           </div>
 
           <div className="flex shrink-0 items-center gap-2 self-start rounded-xl border border-border/60 bg-card/60 px-3.5 py-2 sm:self-center">
-            {isFake ? (
+            {riskScore >= 50 || isFake ? (
               <ShieldAlert className="size-4 text-red-500" />
             ) : (
               <CheckCircle2 className="size-4 text-emerald-500" />
             )}
             <div className="text-left text-xs">
               <span className="block font-semibold text-foreground">
-                {isFake ? "High Risk Alert" : "Passed Security Audit"}
+                {riskScore >= 50 || isFake ? "High Risk Alert" : riskScore >= 25 ? "Caution Notice" : "Passed Security Audit"}
               </span>
               <span className="block text-[11px] text-muted-foreground">
                 Score: {riskScore}/100
@@ -255,7 +321,7 @@ export function PredictionSummary({ prediction, timestamp }: PredictionSummaryPr
           </div>
 
           <div className="flex items-center justify-between border-t border-border/50 pt-3 text-xs text-muted-foreground">
-            <span>Confidence Index</span>
+            <span>Authenticity Likelihood</span>
             <span className="font-semibold text-foreground">
               {isFake ? probabilityFormatted : `${(100 - probabilityPct).toFixed(1)}%`}
             </span>

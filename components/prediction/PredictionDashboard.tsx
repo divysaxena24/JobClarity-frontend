@@ -27,7 +27,7 @@ export function PredictionDashboard({
 
   return (
     <div className="mt-8 w-full space-y-6">
-      <PredictionSummary prediction={prediction} />
+      <PredictionSummary prediction={prediction} jobDescription={jobDescription} />
       <div className="w-full">
         <RiskGuide />
       </div>
