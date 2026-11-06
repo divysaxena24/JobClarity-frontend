@@ -11,12 +11,16 @@ interface FeatureImpactCardProps {
   index: number;
   /** Largest absolute impact in the list, used to normalize the direction bar. */
   maxAbsImpact?: number;
+  isSelected?: boolean;
+  onClick?: () => void;
 }
 
 export const FeatureImpactCard = memo(function FeatureImpactCard({
   reason,
   index,
   maxAbsImpact,
+  isSelected,
+  onClick,
 }: FeatureImpactCardProps) {
   const increases = reason.impact > 0;
   const formatted = reason.impact.toFixed(4);
@@ -30,8 +34,14 @@ export const FeatureImpactCard = memo(function FeatureImpactCard({
     <motion.li
       initial={{ opacity: 0, x: 12 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.35, delay: 0.15 + index * 0.07, ease: "easeOut" }}
-      className="group relative flex h-full min-w-0 flex-col gap-2.5 rounded-2xl border border-border/70 bg-background/60 p-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-ring/40 hover:bg-muted/40 hover:shadow-md hover:shadow-primary/[0.05]"
+      transition={{ duration: 0.35, delay: 0.15 + index * 0.05, ease: "easeOut" }}
+      onClick={onClick}
+      className={cn(
+        "group relative flex h-full min-w-0 cursor-pointer flex-col gap-2.5 rounded-2xl border p-3.5 transition-all duration-200",
+        isSelected
+          ? "border-primary bg-primary/5 ring-2 ring-primary/30 shadow-md"
+          : "border-border/70 bg-background/60 hover:-translate-y-0.5 hover:border-ring/40 hover:bg-muted/40 hover:shadow-md hover:shadow-primary/[0.05]"
+      )}
     >
       <div className="flex items-center justify-between gap-3">
         <code className="min-w-0 truncate rounded-md border border-border/70 bg-muted/60 px-2 py-1 font-mono text-xs text-foreground transition-colors group-hover:border-ring/40">
@@ -64,25 +74,36 @@ export const FeatureImpactCard = memo(function FeatureImpactCard({
         >
           {increases ? "High Risk Signal" : "Legitimacy Signal"}
         </span>
-        <span className="shrink-0 tabular-nums text-xs text-muted-foreground">
+        <span className="shrink-0 tabular-nums text-xs text-muted-foreground font-mono">
           {increases ? "+" : ""}
           {formatted}
         </span>
       </div>
 
-      {/* Subtle direction bar, normalized to the strongest signal */}
-      <div className="mt-auto h-1 overflow-hidden rounded-full bg-border/50">
-        <div
+      <div
+        className="h-1.5 w-full overflow-hidden rounded-full bg-border/60"
+        role="progressbar"
+        aria-label={`Impact bar for ${reason.feature}`}
+        aria-valuenow={Math.round(absImpact * 100)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
+        <motion.div
           className={cn(
-            "h-full rounded-full",
+            "h-full rounded-full transition-all duration-300",
             increases
-              ? "ml-auto bg-gradient-to-l from-red-500 to-red-400/60"
-              : "bg-gradient-to-r from-emerald-500 to-emerald-400/60"
+              ? "bg-gradient-to-r from-red-500 to-rose-400"
+              : "bg-gradient-to-r from-emerald-500 to-teal-400"
           )}
-          style={{ width: `${barWidth}%` }}
-          aria-hidden="true"
+          initial={{ width: 0 }}
+          animate={{ width: `${barWidth}%` }}
+          transition={{ duration: 0.6, delay: 0.2 + index * 0.05, ease: "easeOut" }}
         />
       </div>
+
+      <p className="min-w-0 text-[11px] leading-relaxed text-muted-foreground">
+        {reason.effect}
+      </p>
     </motion.li>
   );
 });
