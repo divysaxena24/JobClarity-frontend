@@ -30,6 +30,7 @@ const item: Variants = {
 
 export default function Hero() {
   const [jobDescription, setJobDescription] = useState("");
+  const [analyzedDescription, setAnalyzedDescription] = useState("");
   const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
   const [predictionKey, setPredictionKey] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -44,6 +45,7 @@ export default function Hero() {
     try {
       const resp = await predictJob(jobDescription);
       setPrediction(resp);
+      setAnalyzedDescription(jobDescription);
       setPredictionKey((k) => k + 1);
     } catch (err: unknown) {
       const anyErr = err as { message?: string; response?: { data?: { message?: string } } };
@@ -153,7 +155,11 @@ export default function Hero() {
             {loading ? (
               <LoadingState key="loading" />
             ) : prediction ? (
-              <PredictionDashboard key={`prediction-${predictionKey}`} prediction={prediction} />
+              <PredictionDashboard
+                key={`prediction-${predictionKey}`}
+                prediction={prediction}
+                jobDescription={analyzedDescription || jobDescription}
+              />
             ) : (
               <EmptyState key="empty" />
             )}

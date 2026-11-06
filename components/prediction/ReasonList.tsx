@@ -18,14 +18,30 @@ import { cn } from "@/lib/utils";
 
 interface ReasonListProps {
   reasons: TopReason[];
+  selectedFeature?: string | null;
+  onSelectFeature?: (feature: string | null) => void;
 }
 
 type SortOption = "abs" | "positive" | "negative";
 type CountOption = "top5" | "all";
 type ViewMode = "chart" | "cards";
 
-export function ReasonList({ reasons }: ReasonListProps) {
-  const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
+export function ReasonList({
+  reasons,
+  selectedFeature: externalSelectedFeature,
+  onSelectFeature: externalOnSelectFeature,
+}: ReasonListProps) {
+  const [internalSelectedFeature, setInternalSelectedFeature] = useState<string | null>(null);
+
+  const selectedFeature =
+    externalSelectedFeature !== undefined ? externalSelectedFeature : internalSelectedFeature;
+  const setSelectedFeature = (feat: string | null) => {
+    if (externalOnSelectFeature) {
+      externalOnSelectFeature(feat);
+    } else {
+      setInternalSelectedFeature(feat);
+    }
+  };
   const [sortBy, setSortBy] = useState<SortOption>("abs");
   const [countFilter, setCountFilter] = useState<CountOption>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("chart");
@@ -306,7 +322,7 @@ export function ReasonList({ reasons }: ReasonListProps) {
             data={displayedData}
             selectedFeature={selectedFeature}
             onSelectFeature={(feat) => {
-              setSelectedFeature((prev) => (prev === feat ? null : feat));
+              setSelectedFeature(selectedFeature === feat ? null : feat);
             }}
           />
         ) : (
@@ -319,7 +335,7 @@ export function ReasonList({ reasons }: ReasonListProps) {
                 maxAbsImpact={maxAbsImpact}
                 isSelected={selectedFeature === item.feature}
                 onClick={() => {
-                  setSelectedFeature((prev) => (prev === item.feature ? null : item.feature));
+                  setSelectedFeature(selectedFeature === item.feature ? null : item.feature);
                 }}
               />
             ))}
