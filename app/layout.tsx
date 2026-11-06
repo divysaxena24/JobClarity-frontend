@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "JobClarity — Detect Fake Job Postings with AI",
+  title: "JobClarity - Detect Fake Job Postings with AI",
   description:
     "Paste any job description and get an instant AI-powered fraud risk score with explainable results powered by XGBoost and SHAP.",
   keywords: [
