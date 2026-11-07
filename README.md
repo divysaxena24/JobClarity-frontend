@@ -89,55 +89,55 @@ This repository hosts the **production frontend**, built with the **Next.js App 
 
 ## 3. Application Screenshots
 
-> *Below are placeholders for the primary workflow views. Screenshots will be added as visual assets are captured.*
+### Hero Section & Job Description Input
+Clean SaaS interface with sample job quick-select chips, manual paste workflow, and interactive analyze trigger.
+
+![JobClarity Landing Page & Hero Section](docs/screenshots/01-landing-page.png)
+
+### Risk Assessment & Prediction Dashboard
+Instant classification with animated 0–100 risk gauge, calibrated probability metric, moderation actions, and categorical risk tier indicators.
 
 ```
 +-----------------------------------------------------------------------------+
 |                                                                             |
-|                          [ SCREENSHOT PLACEHOLDER ]                         |
+|  [ CRITICAL RISK ]  Score: 94/100  |  Probability: 94.2%  |  Action: BLOCK  |
 |                                                                             |
-|                      Hero Section & Job Description Input                   |
-|           Clean SaaS interface with sample job quick-select chips           |
+|  Reasoning: Significant deceptive signals, vocabulary anomalies, or scam    |
+|  patterns detected. Telegram recruitment channels & registration fee flags. |
 |                                                                             |
 +-----------------------------------------------------------------------------+
 ```
-*(Placeholder: Hero view showing the job description textarea, sample chips, and analyze trigger)*
+*(High-risk detection view highlighting critical fraud signals and automated moderation recommendation)*
+
+### Interactive SHAP Feature Contribution Chart
+Bidirectional Recharts bar visualization displaying top-K risk factors with exact TreeSHAP attribution values and risk-increasing vs risk-decreasing color coding.
+
+```
++-----------------------------------------------------------------------------+
+|  Top Feature Contributions (TreeSHAP Margin Impact)                         |
+|                                                                             |
+|  [+1.85] registration fee   ====================================> (Red)     |
+|  [+1.42] telegram           =============================> (Red)            |
+|  [+1.28] guaranteed returns =========================> (Red)                |
+|  [-0.62] competitive salary <============ (Green)                          |
+|  [-0.81] engineering        <================ (Green)                      |
++-----------------------------------------------------------------------------+
+```
+*(Interactive explainability chart with feature sorting, filtering, and tooltip breakdown)*
+
+### Job Description Intelligence Explorer & In-Context Highlighting
+Full job text with interactive phrase highlights mapped directly to SHAP attribution signals and feature detail drawer.
 
 ```
 +-----------------------------------------------------------------------------+
 |                                                                             |
-|                          [ SCREENSHOT PLACEHOLDER ]                         |
-|                                                                             |
-|                 Prediction Summary & Animated Risk Gauge                   |
-|        Visualizing 0–100 risk score, probability bar, and verdict badge     |
-|                                                                             |
-+-----------------------------------------------------------------------------+
-```
-*(Placeholder: Risk overview dashboard showing Low/Medium/High/Critical verdict and gauge)*
-
-```
-+-----------------------------------------------------------------------------+
-|                                                                             |
-|                          [ SCREENSHOT PLACEHOLDER ]                         |
-|                                                                             |
-|                  Interactive SHAP Feature Contribution Chart                |
-|      Bi-directional Recharts bar chart highlighting positive/negative SHAP  |
+|  URGENT!! Work from home data entry job. Earn Rs. 50,000 per week with NO   |
+|  experience needed. Just pay a [one-time registration fee] of Rs. 2,000 to  |
+|  unlock unlimited tasks. Contact immediately on [Telegram]...               |
 |                                                                             |
 +-----------------------------------------------------------------------------+
 ```
-*(Placeholder: SHAP explainability chart with red risk-increasing and green risk-decreasing bars)*
-
-```
-+-----------------------------------------------------------------------------+
-|                                                                             |
-|                          [ SCREENSHOT PLACEHOLDER ]                         |
-|                                                                             |
-|               Job Description Explorer & In-Context Highlighting            |
-|       Full text with interactive phrase highlights and SHAP detail cards    |
-|                                                                             |
-+-----------------------------------------------------------------------------+
-```
-*(Placeholder: In-context highlighted job description and feature detail drawer)*
+*(Contextual token inspector highlighting deceptive phrasing directly inside the original posting)*
 
 ---
 
