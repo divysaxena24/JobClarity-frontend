@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
-import { CircleAlert, Sparkles } from "lucide-react";
+import { CircleAlert, Sparkles, X } from "lucide-react";
 import { predictJob } from "@/lib/api/client";
 import { HeroBackground } from "@/components/layout/HeroBackground";
 import { AnalyzerCard } from "@/components/analyzer/AnalyzerCard";
@@ -48,10 +48,17 @@ export default function Hero() {
       setAnalyzedDescription(jobDescription);
       setPredictionKey((k) => k + 1);
     } catch (err: unknown) {
-      const anyErr = err as { message?: string; response?: { data?: { message?: string } } };
-      const msg =
-        anyErr?.response?.data?.message || anyErr?.message || "An unknown error occurred";
-      setError(String(msg));
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        const anyErr = err as { message?: string; response?: { data?: { message?: string; detail?: string } } };
+        const msg =
+          anyErr?.response?.data?.detail ||
+          anyErr?.response?.data?.message ||
+          anyErr?.message ||
+          "An unknown error occurred while analyzing the posting.";
+        setError(String(msg));
+      }
     } finally {
       setLoading(false);
     }
@@ -138,12 +145,20 @@ export default function Hero() {
                   className="mt-0.5 size-4.5 shrink-0 text-red-600 dark:text-red-400"
                   aria-hidden="true"
                 />
-                <div>
+                <div className="flex-1">
                   <p className="font-medium text-red-700 dark:text-red-300">
                     Could not analyze this posting
                   </p>
                   <p className="mt-0.5 text-red-600/90 dark:text-red-400/90">{error}</p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setError(null)}
+                  className="ml-auto -mr-1 rounded-lg p-1 text-red-500 hover:bg-red-500/10 hover:text-red-700 dark:hover:text-red-300"
+                  aria-label="Dismiss error"
+                >
+                  <X className="size-4" />
+                </button>
               </div>
             </motion.div>
           ) : null}

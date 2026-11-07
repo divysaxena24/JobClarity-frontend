@@ -14,13 +14,37 @@ export const apiClient = axios.create({
   },
 });
 
+export class ApiError extends Error {
+  statusCode?: number;
+  retryAfter?: number;
+
+  constructor(message: string, statusCode?: number, retryAfter?: number) {
+    super(message);
+    this.name = "ApiError";
+    this.statusCode = statusCode;
+    this.retryAfter = retryAfter;
+  }
+}
+
 interface ApiErrorBody {
   detail?: unknown;
   message?: unknown;
 }
 
-function extractFastApiValidationMessages(data: unknown): string | null {
-  // FastAPI Pydantic validation errors often appear as { detail: [ { msg: "..." }, ... ] }
+function cleanValidationMessage(msg: string): string {
+  if (msg.includes("String should have at least 20 characters") || msg.includes("at least 20 characters")) {
+    return "Job description is too short (minimum 20 characters required).";
+  }
+  if (msg.includes("String should have at most 50000 characters") || msg.includes("at most 50000 characters")) {
+    return "Job description exceeds maximum allowed length (50,000 characters).";
+  }
+  if (msg.startsWith("Value error, ")) {
+    return msg.replace(/^Value error,\s*/, "");
+  }
+  return msg;
+}
+
+export function extractFastApiValidationMessages(data: unknown): string | null {
   if (!data) return null;
 
   const detail = (data as ApiErrorBody).detail;
@@ -28,12 +52,11 @@ function extractFastApiValidationMessages(data: unknown): string | null {
     const msgs = detail
       .map((item: unknown): string | null => {
         if (!item) return null;
-        if (typeof item === "string") return item;
+        if (typeof item === "string") return cleanValidationMessage(item);
         if (typeof item === "object") {
-          // item can be { msg: string } or { msg: string, loc: ..., type: ... }
           const record = item as { msg?: unknown; message?: unknown };
-          if (typeof record.msg === "string") return record.msg;
-          if (typeof record.message === "string") return record.message;
+          if (typeof record.msg === "string") return cleanValidationMessage(record.msg);
+          if (typeof record.message === "string") return cleanValidationMessage(record.message);
         }
         return null;
       })
@@ -45,10 +68,10 @@ function extractFastApiValidationMessages(data: unknown): string | null {
   return null;
 }
 
-function extractServerMessage(data: unknown): string | null {
+export function extractServerMessage(data: unknown): string | null {
   if (!data) return null;
 
-  // Preferred: FastAPI style
+  // Preferred: FastAPI validation details array
   const validationMsg = extractFastApiValidationMessages(data);
   if (validationMsg) return validationMsg;
 
@@ -57,13 +80,103 @@ function extractServerMessage(data: unknown): string | null {
   // Generic message field
   if (typeof body.message === "string" && body.message.trim() !== "") return body.message;
 
-  // Some backends return { detail: "..." }
-  if (typeof body.detail === "string" && body.detail.trim() !== "") return body.detail;
+  // detail field as string
+  if (typeof body.detail === "string" && body.detail.trim() !== "") {
+    return cleanValidationMessage(body.detail);
+  }
 
-  // Response might be a plain string
-  if (typeof data === "string" && data.trim() !== "") return data;
+  // Response might be a plain string (guard against HTML error pages)
+  if (typeof data === "string" && data.trim() !== "" && !data.trim().startsWith("<")) {
+    return data;
+  }
 
   return null;
+}
+
+export function parseApiError(err: unknown): ApiError {
+  if (err instanceof ApiError) return err;
+
+  const anyErr = err as {
+    code?: string;
+    message?: string;
+    response?: {
+      status?: number;
+      statusText?: string;
+      data?: unknown;
+      headers?: Record<string, string | undefined>;
+    };
+    request?: unknown;
+  };
+
+  // Render / Cloud cold start or network timeout
+  if (anyErr?.code === "ECONNABORTED" || anyErr?.message?.includes("timeout")) {
+    return new ApiError(
+      "The server is waking up. Please wait 30–60 seconds and try again.",
+      504
+    );
+  }
+
+  if (axios.isAxiosError(err)) {
+    const status = anyErr.response?.status;
+    const responseData = anyErr.response?.data;
+    const headers = anyErr.response?.headers;
+    const serverMsg = extractServerMessage(responseData);
+
+    const retryAfterHeader = headers?.["retry-after"];
+    const retryAfter = retryAfterHeader ? parseInt(retryAfterHeader, 10) : undefined;
+
+    if (status === 429) {
+      return new ApiError(
+        serverMsg || "Rate limit reached (10 requests per minute). Please wait a moment before trying again.",
+        429,
+        retryAfter
+      );
+    }
+
+    if (status === 503) {
+      return new ApiError(
+        serverMsg || "Model inference service is currently initializing. Please try again shortly.",
+        503
+      );
+    }
+
+    if (status === 422) {
+      return new ApiError(
+        serverMsg || "Job description must be between 20 and 50,000 characters.",
+        422
+      );
+    }
+
+    if (status && status >= 500) {
+      return new ApiError(
+        "Server error encountered during analysis. The backend service may be waking up, please retry shortly.",
+        status
+      );
+    }
+
+    if (serverMsg) {
+      return new ApiError(serverMsg, status);
+    }
+
+    if (anyErr.response?.statusText) {
+      return new ApiError(anyErr.response.statusText, status);
+    }
+
+    if (anyErr.request && !anyErr.response) {
+      return new ApiError(
+        "Unable to connect to JobClarity API. Please check your network connection or verify that the backend is running.",
+        0
+      );
+    }
+
+    return new ApiError(anyErr.message ?? "Something went wrong. Please try again.", status);
+  }
+
+  if (err instanceof Error) {
+    return new ApiError(err.message);
+  }
+
+  return new ApiError("An unexpected error occurred while analyzing the job posting.");
 }
 
 /**
@@ -77,43 +190,7 @@ export async function predictJob(job_description: string): Promise<PredictionRes
     const res = await apiClient.post<PredictionResponse>("/predict", body);
     return res.data;
   } catch (err: unknown) {
-    // Axios timeout code
-    const anyErr = err as {
-      code?: string;
-      message?: string;
-      response?: { statusText?: string; data?: unknown };
-      request?: unknown;
-    };
-    if (anyErr?.code === "ECONNABORTED") {
-      // Render free instances can cold-start; give a clear instruction
-      throw new Error("The server is waking up. Please wait 30–60 seconds and try again.");
-    }
-
-    // If Axios error with response, try to extract structured messages
-    if (axios.isAxiosError(err)) {
-      const responseData = anyErr.response?.data;
-      const serverMsg = extractServerMessage(responseData);
-      if (serverMsg) {
-        throw new Error(serverMsg);
-      }
-
-      // Fallback to status text if available
-      if (anyErr.response?.statusText) {
-        throw new Error(anyErr.response.statusText);
-      }
-
-      // Network error with no response
-      if (anyErr.request && !anyErr.response) {
-        throw new Error("Network error. Please check your connection and try again.");
-      }
-
-      // Otherwise, rethrow the axios error message
-      throw new Error(anyErr.message ?? "Something went wrong. Please try again.");
-    }
-
-    // Non-Axios unknown error
-    const unknownMsg = (anyErr && (anyErr.message ?? String(anyErr))) || "Something went wrong. Please try again.";
-    throw new Error(unknownMsg);
+    throw parseApiError(err);
   }
 }
 
