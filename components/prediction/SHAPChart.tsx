@@ -130,12 +130,37 @@ export function SHAPChart({
 
   return (
     <div className="w-full">
+      {/* Screen reader accessible data table */}
+      <div className="sr-only">
+        <table aria-label="SHAP Feature Contribution Table">
+          <caption>SHAP feature contributions and directional risk impact</caption>
+          <thead>
+            <tr>
+              <th scope="col">Rank</th>
+              <th scope="col">Feature</th>
+              <th scope="col">Attribution Impact</th>
+              <th scope="col">Direction</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((item) => (
+              <tr key={item.feature}>
+                <td>{item.rank}</td>
+                <td>{item.feature}</td>
+                <td>{item.impact > 0 ? `+${item.impact.toFixed(4)}` : item.impact.toFixed(4)}</td>
+                <td>{item.impact > 0 ? "Increases Fraud Risk" : "Decreases Fraud Risk"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
       {/* Direction indicators above the zero line */}
-      <div className="mb-2 flex items-center justify-between px-2 text-[11px] font-semibold">
+      <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between px-2 text-[11px] font-semibold">
         <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
           <span aria-hidden="true">&larr;</span> Decreases Fraud Risk (Legitimacy)
         </span>
-        <span className="font-mono text-xs text-muted-foreground">Zero Baseline (0.0)</span>
+        <span className="font-mono text-xs text-muted-foreground hidden sm:inline">Zero Baseline (0.0)</span>
         <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
           Increases Fraud Risk (Suspicion) <span aria-hidden="true">&rarr;</span>
         </span>

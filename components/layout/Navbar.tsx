@@ -48,6 +48,12 @@ export default function Navbar() {
           : "border-b border-transparent bg-transparent"
       )}
     >
+      <a
+        href="#analyzer"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-xl focus:bg-primary focus:px-4 focus:py-2.5 focus:text-xs focus:font-semibold focus:text-primary-foreground focus:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+      >
+        Skip to analyzer
+      </a>
       <nav
         aria-label="Primary"
         className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8"
