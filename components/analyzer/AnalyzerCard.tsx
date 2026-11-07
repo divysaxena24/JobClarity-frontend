@@ -54,8 +54,9 @@ export function AnalyzerCard({
             aria-describedby="analyzer-char-count"
             placeholder="Paste a job description here…"
             maxLength={MAX_CHARS}
+            disabled={loading}
             className={cn(
-              "min-h-48 resize-y rounded-2xl border-border/80 bg-background/70 px-4 py-3.5 text-[15px] leading-7 shadow-inner shadow-primary/[0.02] transition-all duration-200 placeholder:opacity-70 placeholder:transition-opacity placeholder:duration-300 focus:placeholder:opacity-30 focus-visible:border-indigo-400/60 focus-visible:bg-background focus-visible:shadow-[0_0_0_4px] focus-visible:shadow-indigo-500/10 dark:focus-visible:border-indigo-400/40 sm:min-h-56",
+              "min-h-48 resize-y rounded-2xl border-border/80 bg-background/70 px-4 py-3.5 text-[15px] leading-7 shadow-inner shadow-primary/[0.02] transition-all duration-200 placeholder:opacity-70 placeholder:transition-opacity placeholder:duration-300 focus:placeholder:opacity-30 focus-visible:border-indigo-400/60 focus-visible:bg-background focus-visible:shadow-[0_0_0_4px] focus-visible:shadow-indigo-500/10 dark:focus-visible:border-indigo-400/40 sm:min-h-56 disabled:opacity-60 disabled:cursor-not-allowed",
               overLimit && "border-red-400/60 focus-visible:border-red-400/60"
             )}
             value={value}
