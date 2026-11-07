@@ -12,6 +12,13 @@ import {
 } from "lucide-react";
 import type { TopReason } from "@/types/prediction";
 import { SHAPChart } from "@/components/prediction/SHAPChart";
+import {
+  processReasons,
+  sortReasons,
+  filterReasonsByCount,
+  type SortOption,
+  type CountOption,
+} from "@/components/prediction/reasonUtils";
 import { SHAPFeatureDetailCard } from "@/components/prediction/SHAPFeatureDetailCard";
 import { FeatureImpactCard } from "@/components/prediction/FeatureImpactCard";
 import { cn } from "@/lib/utils";
@@ -22,8 +29,6 @@ interface ReasonListProps {
   onSelectFeature?: (feature: string | null) => void;
 }
 
-type SortOption = "abs" | "positive" | "negative";
-type CountOption = "top5" | "all";
 type ViewMode = "chart" | "cards";
 
 export function ReasonList({
@@ -47,54 +52,19 @@ export function ReasonList({
   const [viewMode, setViewMode] = useState<ViewMode>("chart");
   const [showExplanation, setShowExplanation] = useState<boolean>(false);
 
-  // Compute ranks and absolute impacts from verified reasons
+  // Compute ranks and absolute impacts from evaluated reasons
   const processedData = useMemo(() => {
-    if (!reasons || !Array.isArray(reasons) || reasons.length === 0) return [];
-
-    const totalAbsImpact = reasons.reduce(
-      (sum, r) => sum + Math.abs(Number.isFinite(r.impact) ? r.impact : 0),
-      0
-    );
-
-    // Initial pass: sort by absolute impact to establish baseline importance ranks #1..#N
-    const ranked = [...reasons]
-      .map((r) => ({
-        feature: r.feature || "unknown",
-        impact: Number.isFinite(r.impact) ? r.impact : 0,
-        effect: r.effect || (r.impact > 0 ? "Increases fraud risk" : "Decreases fraud risk"),
-        absImpact: Math.abs(Number.isFinite(r.impact) ? r.impact : 0),
-      }))
-      .sort((a, b) => b.absImpact - a.absImpact)
-      .map((r, idx) => ({
-        ...r,
-        rank: idx + 1,
-        totalAbsImpact,
-      }));
-
-    return ranked;
+    return processReasons(reasons);
   }, [reasons]);
 
   // Apply user-selected sorting
   const sortedData = useMemo(() => {
-    const list = [...processedData];
-    if (sortBy === "abs") {
-      return list.sort((a, b) => b.absImpact - a.absImpact);
-    }
-    if (sortBy === "positive") {
-      return list.sort((a, b) => b.impact - a.impact);
-    }
-    if (sortBy === "negative") {
-      return list.sort((a, b) => a.impact - b.impact);
-    }
-    return list;
+    return sortReasons(processedData, sortBy);
   }, [processedData, sortBy]);
 
   // Apply Top 5 vs All slice
   const displayedData = useMemo(() => {
-    if (countFilter === "top5") {
-      return sortedData.slice(0, 5);
-    }
-    return sortedData;
+    return filterReasonsByCount(sortedData, countFilter);
   }, [sortedData, countFilter]);
 
   // Selected feature detail object

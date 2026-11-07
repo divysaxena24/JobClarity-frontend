@@ -9,7 +9,7 @@ export interface PDFReportOptions {
 /**
  * Format a number as a signed 4-decimal string.
  */
-function formatImpact(val: number): string {
+export function formatImpact(val: number): string {
   const formatted = Math.abs(val).toFixed(4);
   return val > 0 ? `+${formatted}` : `-${formatted}`;
 }
@@ -18,7 +18,7 @@ function formatImpact(val: number): string {
  * Get calibrated, trust-centered verdict metadata.
  * Strictly adheres to non-absolute, non-causal terminology.
  */
-function getVerdictMetadata(prediction: PredictionResponse) {
+export function getVerdictMetadata(prediction: PredictionResponse) {
   const riskScore = prediction.fraud_risk_score;
   const isFake = prediction.prediction === "Fake";
 
@@ -50,7 +50,7 @@ function getVerdictMetadata(prediction: PredictionResponse) {
     title: "Likely Legitimate",
     subtitle:
       "Vocabulary and structural patterns consistent with standard authentic employment postings.",
-    badgeText: "Low Risk Verified",
+    badgeText: "Low Risk Pattern",
     themeColor: [16, 185, 129] as [number, number, number], // Emerald 500
     bgFill: [236, 253, 245] as [number, number, number], // Emerald 50
     borderColor: [110, 231, 183] as [number, number, number], // Emerald 300

@@ -19,6 +19,11 @@ import { RiskBadge } from "@/components/prediction/RiskBadge";
 import { AnimatedRiskGauge } from "@/components/prediction/AnimatedRiskGauge";
 import { InfoTooltip } from "@/components/prediction/InfoTooltip";
 import { exportPredictionReportPDF } from "@/lib/pdf/reportGenerator";
+import {
+  getVerdictTitle,
+  getVerdictDescription,
+  getModerationAction,
+} from "@/components/prediction/summaryUtils";
 import { cn } from "@/lib/utils";
 
 interface PredictionSummaryProps {
@@ -79,26 +84,9 @@ export function PredictionSummary({
   const modelVersion = prediction?.model_version || "1.0.0";
 
   // Calibrated verdict language (non-absolute, trust-centered)
-  const verdictTitle =
-    riskScore >= 50 || isFake
-      ? "High Risk — Verify Before Applying"
-      : riskScore >= 25
-      ? "Elevated Risk — Caution Advised"
-      : "Likely Legitimate";
-
-  const verdictDescription =
-    riskScore >= 50 || isFake
-      ? "Significant deceptive signals, vocabulary anomalies, or scam patterns detected."
-      : riskScore >= 25
-      ? "Moderate anomalous language patterns detected. Further independent employer verification is recommended."
-      : "Verified authentic terminology, standard responsibilities, and standard corporate patterns.";
-
-  // Moderation action recommendation based on verified risk level
-  const moderationAction = isFake
-    ? riskScore >= 75
-      ? { label: "IMMEDIATE BLOCK", color: "text-red-600 bg-red-500/10 border-red-500/30 dark:text-red-400" }
-      : { label: "FLAG FOR REVIEW", color: "text-amber-600 bg-amber-500/10 border-amber-500/30 dark:text-amber-400" }
-    : { label: "SAFE TO PASS", color: "text-emerald-600 bg-emerald-500/10 border-emerald-500/30 dark:text-emerald-400" };
+  const verdictTitle = getVerdictTitle(riskScore, isFake);
+  const verdictDescription = getVerdictDescription(riskScore, isFake);
+  const moderationAction = getModerationAction(riskScore, isFake);
 
   return (
     <motion.section
